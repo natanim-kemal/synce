@@ -1,0 +1,36 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  files     File[]
+}
+
+model File {
+  id           String    @id @default(uuid())
+  userId       String
+  originalName String
+  storedName   String
+  size         Int
+  hash         String    @db.VarChar(64)
+  uploadedAt   DateTime  @default(now())
+  lastModified DateTime  @updatedAt
+  deletedAt    DateTime?
+  deviceId     String?
+  version      Int       @default(1)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([hash])
+  @@index([userId, deletedAt])
+}
