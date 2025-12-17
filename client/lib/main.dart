@@ -21,10 +21,16 @@ class SynceApp extends ConsumerWidget {
       theme: DesignSystem.lightTheme,
       darkTheme: DesignSystem.darkTheme,
       themeMode: ThemeMode.system,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaleFactor: 0.8),
+          child: child!,
+        );
+      },
       home: authState.when(
         data: (isAuthenticated) => isAuthenticated ? const HomePage() : const LoginPage(),
         loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-        error: (err, stack) => const LoginPage(), // Fallback to login on error (or show error screen)
+        error: (err, stack) => const LoginPage(),
       ),
       debugShowCheckedModeBanner: false,
     );

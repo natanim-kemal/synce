@@ -9,7 +9,7 @@ final apiClientProvider = Provider((ref) => ApiClient());
 class ApiClient {
   late final Dio _dio;
   final _storage = const FlutterSecureStorage();
-  final String baseUrl = 'http://10.0.2.2:3000'; // Android Emulator localhost
+  final String baseUrl = 'http://192.168.154.198:3000';
 
   ApiClient() {
     _dio = Dio(BaseOptions(
@@ -53,13 +53,22 @@ class ApiClient {
     await _storage.write(key: 'auth_token', value: token);
   }
 
-  Future<void> uploadFile(File file, String deviceId) async {
-      String fileName = basename(file.path);
-      FormData formData = FormData.fromMap({
-        "file": await MultipartFile.fromFile(file.path, filename: fileName),
-        "deviceId": deviceId,
-      });
-      await _dio.post('/files/upload', data: formData);
+  Future<void> uploadFile(
+    File file, 
+    String deviceId, 
+    {void Function(int sent, int total)? onProgress}
+  ) async {
+    String fileName = basename(file.path);
+    FormData formData = FormData.fromMap({
+      "file": await MultipartFile.fromFile(file.path, filename: fileName),
+      "deviceId": deviceId,
+    });
+    
+    await _dio.post(
+      '/files/upload', 
+      data: formData,
+      onSendProgress: onProgress,
+    );
   }
 
   Future<Map<String, dynamic>> getSyncChanges(DateTime since) async {
@@ -67,5 +76,9 @@ class ApiClient {
       'since': since.toIso8601String(),
     });
     return response.data;
+  }
+
+  Future<void> deleteFile(String fileId) async {
+    await _dio.delete('/files/$fileId');
   }
 }

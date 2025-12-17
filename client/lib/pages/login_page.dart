@@ -23,64 +23,67 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Icon(Icons.lock_outline, size: 64, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(height: 32),
-                Text(
-                  'Welcome Back',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
-                  validator: (value) => value!.isEmpty ? 'Required' : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.key_outlined),
-                  ),
-                  obscureText: true,
-                  validator: (value) => value!.isEmpty ? 'Required' : null,
-                ),
-                const SizedBox(height: 24),
-                if (authState is AsyncError)
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Icon(Icons.lock_outline, size: 64, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(height: 32),
                   Text(
-                    authState.error.toString(),
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    'Welcome Back',
+                    style: Theme.of(context).textTheme.headlineMedium,
                     textAlign: TextAlign.center,
                   ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: authState.isLoading ? null : _login,
-                  child: authState.isLoading
-                      ? const CircularProgressIndicator()
-                      : const Text('Login'),
-                ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const RegisterPage()),
-                    );
-                  },
-                  child: const Text('Create Account'),
-                ),
-              ],
+                  const SizedBox(height: 32),
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.email_outlined),
+                    ),
+                    validator: (value) => value!.isEmpty ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _passwordController,
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.key_outlined),
+                    ),
+                    obscureText: true,
+                    validator: (value) => value!.isEmpty ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 24),
+                  if (authState is AsyncError)
+                    Text(
+                      authState.error.toString(),
+                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      textAlign: TextAlign.center,
+                    ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: authState.isLoading ? null : _login,
+                    child: authState.isLoading
+                        ? const CircularProgressIndicator()
+                        : const Text('Login'),
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const RegisterPage()),
+                      );
+                    },
+                    child: const Text('Create Account'),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
