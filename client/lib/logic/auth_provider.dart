@@ -1,14 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/api_client.dart';
+import 'sync_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final authProvider = StateNotifierProvider<AuthNotifier, AsyncValue<bool>>((ref) {
-  return AuthNotifier(ref.watch(apiClientProvider));
+  return AuthNotifier(ref);
 });
 
 class AuthNotifier extends StateNotifier<AsyncValue<bool>> {
+  final Ref _ref;
   final ApiClient _api;
 
-  AuthNotifier(this._api) : super(const AsyncValue.loading()) {
+  AuthNotifier(this._ref) : _api = _ref.read(apiClientProvider), super(const AsyncValue.loading()) {
     checkAuthStatus();
   }
 
@@ -28,6 +31,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<bool>> {
       state = const AsyncValue.data(true);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+      rethrow;
     }
   }
 
@@ -38,11 +42,25 @@ class AuthNotifier extends StateNotifier<AsyncValue<bool>> {
       state = const AsyncValue.data(true);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+      rethrow;
     }
   }
 
   Future<void> logout() async {
     await _api.logout();
+    
+    // Clear local database
+    final db = _ref.read(databaseProvider);
+    await db.delete(db.localFiles).go();
+    
+    // Clear last sync time
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('lastSyncTime');
+    
+    // Invalidate providers to clear memory state
+    _ref.invalidate(syncProvider);
+    _ref.invalidate(isSyncingProvider);
+    
     state = const AsyncValue.data(false);
   }
 }

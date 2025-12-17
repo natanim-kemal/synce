@@ -28,9 +28,32 @@ class ApiClient {
       },
       onError: (DioException e, handler) {
         if (e.response?.statusCode == 401) {
-          // TODO: Handle token expiration (logout)
+          _storage.delete(key: 'auth_token');
         }
-        return handler.next(e);
+        
+        // Extract human-readable message from NestJS response
+        String message = e.message ?? 'Unknown error';
+        if (e.response?.data != null && e.response?.data is Map) {
+          final data = e.response?.data as Map;
+          if (data.containsKey('message')) {
+            final msg = data['message'];
+            if (msg is List) {
+              message = msg.join(', ');
+            } else {
+              message = msg.toString();
+            }
+          }
+        }
+        
+        final newError = DioException(
+          requestOptions: e.requestOptions,
+          response: e.response,
+          type: e.type,
+          error: message,
+          message: message,
+        );
+        
+        return handler.next(newError);
       },
     ));
   }
@@ -80,5 +103,19 @@ class ApiClient {
 
   Future<void> deleteFile(String fileId) async {
     await _dio.delete('/files/$fileId');
+  }
+
+  Future<void> downloadFile(String fileId, String savePath, {void Function(int count, int total)? onProgress}) async {
+    print('Downloading from: ${baseUrl}/files/download/$fileId to $savePath');
+    await _dio.download(
+      '/files/download/$fileId',
+      savePath,
+      onReceiveProgress: (count, total) {
+        if (total > 0) {
+          print('Download progress: ${(count / total * 100).toStringAsFixed(0)}%');
+        }
+        onProgress?.call(count, total);
+      },
+    );
   }
 }

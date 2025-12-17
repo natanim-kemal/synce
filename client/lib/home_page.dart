@@ -112,6 +112,20 @@ class HomePage extends ConsumerWidget {
                                         ],
                                       ),
                                     ),
+                                    onTap: () async {
+                                      try {
+                                        await ref.read(syncProvider.notifier).openFile(file);
+                                      } catch (e) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Could not open file: $e'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
                                   ),
                                   DataCell(Text(_formatDate(file.lastModified))),
                                   DataCell(Text(_formatFileSize(file.size))),

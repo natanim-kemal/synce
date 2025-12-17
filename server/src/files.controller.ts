@@ -9,10 +9,12 @@ import {
   UploadedFile,
   UseGuards,
   Request,
+  Res,
 } from '@nestjs/common';
 import { FilesService } from './files.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
+import type { Response } from 'express';
 
 @Controller('files')
 @UseGuards(AuthGuard('jwt'))
@@ -26,7 +28,12 @@ export class FilesController {
     @Body('deviceId') deviceId: string,
     @Request() req
   ) {
-    return this.filesService.uploadFile(req.user.userId, file, deviceId || 'unknown');
+    return this.filesService.uploadFile(
+      req.user.userId,
+      file,
+      deviceId || 'unknown',
+      req.user.email,
+    );
   }
 
   @Get()
@@ -35,8 +42,9 @@ export class FilesController {
   }
 
   @Get('download/:id')
-  download(@Param('id') id: string, @Request() req) {
-    return this.filesService.getDownloadUrl(req.user.userId, id);
+  async download(@Param('id') id: string, @Request() req, @Res() res: Response) {
+    const url = await this.filesService.getDownloadUrl(req.user.userId, id);
+    res.redirect(url);
   }
 
   @Delete(':id')

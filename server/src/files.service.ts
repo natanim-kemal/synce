@@ -14,6 +14,7 @@ export class FilesService {
     userId: string,
     file: Express.Multer.File,
     deviceId?: string,
+    email?: string,
   ) {
     // 0. Validate file exists
     if (!file) {
@@ -30,29 +31,47 @@ export class FilesService {
 
     // 2. Calculate SHA-256 hash
     const hash = createHash('sha256').update(file.buffer).digest('hex');
-    const storedName = `${hash}.pdf`;
+    const folder = email || userId;
+    const storedName = `${folder}/${hash}.pdf`;
 
-    // 3. Check if file with same name already exists (name-based replacement)
+    // 3. Check if file with same name already exists
     const existingFile = await this.prisma.file.findFirst({
       where: { userId, originalName: file.originalname, deletedAt: null },
     });
 
     if (existingFile) {
-      // File with same name exists - delete old S3 file and soft-delete DB record
-      await this.storage.deleteFile(existingFile.storedName);
-      await this.prisma.file.update({
+      // If the storedName (which includes hash) is different, we need to upload and potentially cleanup
+      if (existingFile.storedName !== storedName) {
+        // Upload new file to S3
+        const s3Exists = await this.storage.fileExists(storedName);
+        if (!s3Exists) {
+          await this.storage.uploadFile(storedName, file.buffer, 'application/pdf');
+        }
+        // Cleanup old S3 file if it's different
+        await this.storage.deleteFile(existingFile.storedName);
+      }
+
+      // Update existing record
+      return this.prisma.file.update({
         where: { id: existingFile.id },
-        data: { deletedAt: new Date() },
+        data: {
+          size: file.size,
+          hash: hash,
+          storedName: storedName,
+          deviceId: deviceId,
+          version: { increment: 1 },
+          lastModified: new Date(),
+        },
       });
     }
 
-    // 4. Upload to S3
+    // 4. Case: New file - Upload to S3
     const s3Exists = await this.storage.fileExists(storedName);
     if (!s3Exists) {
       await this.storage.uploadFile(storedName, file.buffer, 'application/pdf');
     }
 
-    // 5. Save metadata to database
+    // 5. Save new record to database
     return this.prisma.file.create({
       data: {
         userId,
@@ -95,8 +114,7 @@ export class FilesService {
   }
 
   async deleteFile(userId: string, fileId: string) {
-    // Soft delete
-    return this.prisma.file.update({
+    return this.prisma.file.updateMany({
       where: { id: fileId, userId },
       data: { deletedAt: new Date() },
     });

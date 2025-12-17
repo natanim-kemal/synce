@@ -7,6 +7,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
 import 'upload_progress_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file_plus/open_file_plus.dart';
+import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 
 final databaseProvider = Provider((ref) => AppDatabase());
 
@@ -159,6 +163,53 @@ class SyncNotifier extends StateNotifier<AsyncValue<List<LocalFile>>> {
       await _loadFiles();
     } catch (e) {
       print("Delete failed: $e");
+      rethrow;
+    }
+  }
+
+  Future<void> openFile(LocalFile file) async {
+    try {
+      // 1. Get Synce directory
+      final docsDir = await getApplicationDocumentsDirectory();
+      final synceDir = Directory(p.join(docsDir.path, 'Synce'));
+      if (!await synceDir.exists()) {
+        await synceDir.create(recursive: true);
+      }
+
+      final localPath = p.join(synceDir.path, file.originalName);
+      print('Download destination path: $localPath');
+      final localFile = File(localPath);
+
+      bool needsDownload = true;
+
+      // 2. Check if local file exists and hash matches
+      if (await localFile.exists()) {
+        final bytes = await localFile.readAsBytes();
+        final localHash = sha256.convert(bytes).toString();
+        if (localHash == file.hash) {
+          needsDownload = false;
+        } else {
+          print('Hash mismatch for ${file.originalName}, re-downloading...');
+        }
+      }
+
+      // 3. Download if needed
+      if (needsDownload) {
+        await _api.downloadFile(file.id, localPath);
+        
+        // Update local database with new path
+        await (_db.update(_db.localFiles)
+          ..where((t) => t.id.equals(file.id)))
+          .write(LocalFilesCompanion(localPath: Value(localPath)));
+      }
+
+      // 4. Open file
+      final result = await OpenFile.open(localPath);
+      if (result.type != ResultType.done) {
+        throw Exception(result.message);
+      }
+    } catch (e) {
+      print('Failed to open file: $e');
       rethrow;
     }
   }
