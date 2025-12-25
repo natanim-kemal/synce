@@ -11,6 +11,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_file_plus/open_file_plus.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 final databaseProvider = Provider((ref) => AppDatabase());
 
@@ -87,7 +89,10 @@ class SyncNotifier extends StateNotifier<AsyncValue<List<LocalFile>>> {
       // 1. Get last sync time from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       final lastSyncMillis = prefs.getInt('lastSyncTime') ?? 0;
-      final since = DateTime.fromMillisecondsSinceEpoch(lastSyncMillis);
+      // Add a 10-second buffer to catch any files that might have been missed 
+      // due to server processing time or clock skew.
+      final since = DateTime.fromMillisecondsSinceEpoch(lastSyncMillis)
+          .subtract(const Duration(seconds: 10));
       
       print('Syncing changes since: $since');
       
@@ -169,9 +174,43 @@ class SyncNotifier extends StateNotifier<AsyncValue<List<LocalFile>>> {
 
   Future<void> openFile(LocalFile file) async {
     try {
+      // 0. Request Permissions
+      if (Platform.isAndroid) {
+        final androidInfo = await DeviceInfoPlugin().androidInfo;
+        bool hasPermission = false;
+        
+        if (androidInfo.version.sdkInt >= 30) {
+          var status = await Permission.manageExternalStorage.status;
+          if (!status.isGranted) {
+            status = await Permission.manageExternalStorage.request();
+          }
+          hasPermission = status.isGranted;
+        } else {
+          var status = await Permission.storage.status;
+          if (!status.isGranted) {
+            status = await Permission.storage.request();
+          }
+          hasPermission = status.isGranted;
+        }
+
+        if (!hasPermission) {
+          throw Exception("Permission denied. Enable 'Allow management of all files' in Settings.");
+        }
+      }
+
       // 1. Get Synce directory
-      final docsDir = await getApplicationDocumentsDirectory();
-      final synceDir = Directory(p.join(docsDir.path, 'Synce'));
+      Directory? baseDir;
+      if (Platform.isAndroid) {
+        baseDir = await getExternalStorageDirectory();
+        // Move up to the root of storage to find/create "Download" or similar public folder if needed
+        // For now, getExternalStorageDirectory() returns /storage/emulated/0/Android/data/com.example.client/files
+        // To save to public Downloads/Synce:
+        baseDir = Directory('/storage/emulated/0/Download'); 
+      } else {
+        baseDir = await getApplicationDocumentsDirectory();
+      }
+      
+      final synceDir = Directory(p.join(baseDir!.path, 'Synce'));
       if (!await synceDir.exists()) {
         await synceDir.create(recursive: true);
       }
