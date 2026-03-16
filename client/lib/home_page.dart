@@ -97,10 +97,10 @@ class HomePage extends ConsumerWidget {
                                         onLongPress: () => _showFileActions(context, ref, file),
                                         child: SizedBox(
                                           width: isSmallScreen 
-                                            ? constraints.maxWidth * 0.3
+                                            ? constraints.maxWidth * 0.4
                                             : isMediumScreen 
-                                              ? constraints.maxWidth * 0.4
-                                              : constraints.maxWidth * 0.5,
+                                              ? constraints.maxWidth * 0.5
+                                              : constraints.maxWidth * 0.6,
                                           child: Row(
                                             children: [
                                               const Icon(Icons.picture_as_pdf, size: 20, color: Colors.red),
