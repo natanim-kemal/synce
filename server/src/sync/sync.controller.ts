@@ -8,11 +8,16 @@ export class SyncController {
     constructor(private readonly syncService: SyncService) { }
 
     @Get('changes')
-    getChanges(@Query('since') since: string, @Request() req) {
+    getChanges(
+        @Query('since') since: string,
+        @Query('cursor') cursor: string,
+        @Query('limit') limit: string,
+        @Request() req
+    ) {
+        const parsedLimit = limit ? parseInt(limit, 10) : 100;
+        
         if (!since) {
-            // If no timestamp, assume sync from beginning of time (epoch)
-            // or throw error depending on requirements. Let's start from 0.
-            return this.syncService.getChanges(req.user.userId, new Date(0));
+            return this.syncService.getChanges(req.user.userId, new Date(0), parsedLimit, cursor || undefined);
         }
 
         const timestamp = new Date(since);
@@ -20,6 +25,6 @@ export class SyncController {
             throw new BadRequestException('Invalid timestamp');
         }
 
-        return this.syncService.getChanges(req.user.userId, timestamp);
+        return this.syncService.getChanges(req.user.userId, timestamp, parsedLimit, cursor || undefined);
     }
 }
