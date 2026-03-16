@@ -9,13 +9,13 @@ final apiClientProvider = Provider((ref) => ApiClient());
 class ApiClient {
   late final Dio _dio;
   final _storage = const FlutterSecureStorage();
-  final String baseUrl = 'http://10.6.153.15:3000';
+  final String baseUrl = 'http://192.168.1.12:3000';
 
   ApiClient() {
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 60),
     ));
 
     _dio.interceptors.add(InterceptorsWrapper(
