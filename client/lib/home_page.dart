@@ -86,30 +86,36 @@ class HomePage extends ConsumerWidget {
                               DataColumn(label: Text('Name')),
                               DataColumn(label: Text('Last Modified')),
                               DataColumn(label: Text('Size')),
-                              DataColumn(label: Text('Actions')),
                             ],
                             rows: files.map((file) {
                               return DataRow(
                                 cells: [
                                   DataCell(
-                                    SizedBox(
-                                      width: isSmallScreen 
-                                        ? constraints.maxWidth * 0.3
-                                        : isMediumScreen 
-                                          ? constraints.maxWidth * 0.4
-                                          : constraints.maxWidth * 0.5,
-                                      child: Row(
-                                        children: [
-                                          const Icon(Icons.picture_as_pdf, size: 20, color: Colors.red),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              file.originalName,
-                                              overflow: TextOverflow.ellipsis,
-                                              maxLines: 1,
-                                            ),
+                                    MouseRegion(
+                                      cursor: SystemMouseCursors.click,
+                                      child: GestureDetector(
+                                        onLongPress: () => _showFileActions(context, ref, file),
+                                        child: SizedBox(
+                                          width: isSmallScreen 
+                                            ? constraints.maxWidth * 0.3
+                                            : isMediumScreen 
+                                              ? constraints.maxWidth * 0.4
+                                              : constraints.maxWidth * 0.5,
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.picture_as_pdf, size: 20, color: Colors.red),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  file.originalName,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  maxLines: 1,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ],
+                                        ),
+                                        onSecondaryTap: () => _showFileActions(context, ref, file),
                                       ),
                                     ),
                                     onTap: () async {
@@ -129,45 +135,6 @@ class HomePage extends ConsumerWidget {
                                   ),
                                   DataCell(Text(_formatDate(file.lastModified))),
                                   DataCell(Text(_formatFileSize(file.size))),
-                                  DataCell(
-                                    IconButton(
-                                      icon: const Icon(Icons.delete, size: 20),
-                                      color: Colors.red,
-                                      onPressed: () async {
-                                        // Show confirmation dialog
-                                        final confirmed = await showDialog<bool>(
-                                          context: context,
-                                          builder: (context) => AlertDialog(
-                                            title: const Text('Delete File?'),
-                                            content: Text('Delete "${file.originalName}"?'),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.pop(context, false),
-                                                child: const Text('Cancel'),
-                                              ),
-                                              TextButton(
-                                                onPressed: () => Navigator.pop(context, true),
-                                                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                                                child: const Text('Delete'),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                        
-                                        if (confirmed == true) {
-                                          try {
-                                            await ref.read(syncProvider.notifier).deleteFile(file.id);
-                                          } catch (e) {
-                                            if (context.mounted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(content: Text('Delete failed: $e')),
-                                              );
-                                            }
-                                          }
-                                        }
-                                      },
-                                    ),
-                                  ),
                                 ],
                               );
                             }).toList(),
@@ -187,6 +154,75 @@ class HomePage extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () => ref.read(syncProvider.notifier).pickAndUploadFile(),
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  void _showFileActions(BuildContext context, WidgetRef ref, LocalFile file) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.open_in_new),
+              title: const Text('Open'),
+              onTap: () async {
+                Navigator.pop(context);
+                try {
+                  await ref.read(syncProvider.notifier).openFile(file);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Could not open file: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Delete', style: TextStyle(color: Colors.red)),
+              onTap: () async {
+                Navigator.pop(context);
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Delete File?'),
+                    content: Text('Delete "${file.originalName}"?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: TextButton.styleFrom(foregroundColor: Colors.red),
+                        child: const Text('Delete'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirmed == true) {
+                  try {
+                    await ref.read(syncProvider.notifier).deleteFile(file.id);
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Delete failed: $e')),
+                      );
+                    }
+                  }
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
