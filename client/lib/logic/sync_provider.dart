@@ -8,7 +8,7 @@ import 'package:path/path.dart' as p;
 import 'upload_progress_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file_plus/open_file_plus.dart';
+import 'package:open_file/open_file.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -129,6 +129,48 @@ class SyncNotifier extends StateNotifier<AsyncValue<List<LocalFile>>> {
           );
         }
         
+        // Handle updated files
+        final updatedFiles = changes['updated'] as List<dynamic>? ?? [];
+        
+        print('Updating ${updatedFiles.length} existing files');
+        
+        for (final fileData in updatedFiles) {
+          final fileMap = fileData as Map<String, dynamic>;
+          final serverVersion = fileMap['version'] as int? ?? 1;
+          final serverHash = fileMap['hash'] as String;
+          
+          // Get local file to check version
+          final localFile = await (_db.select(_db.localFiles)
+            ..where((t) => t.id.equals(fileMap['id'] as String))).getSingleOrNull();
+          
+          if (localFile != null) {
+            // Conflict resolution: compare versions
+            if (serverVersion > localFile.version) {
+              // Server has newer version - update local
+              await (_db.update(_db.localFiles)
+                ..where((t) => t.id.equals(fileMap['id'] as String)))
+                .write(LocalFilesCompanion(
+                  originalName: Value(fileMap['originalName'] as String),
+                  size: Value(fileMap['size'] as int),
+                  hash: Value(serverHash),
+                  version: Value(serverVersion),
+                  lastModified: Value(DateTime.parse(fileMap['lastModified'] as String)),
+                  localPath: const Value(null), // Clear local path so it re-downloads
+                ));
+              print('Updated local file: ${fileMap['originalName']} to version $serverVersion');
+            } else if (serverVersion == localFile.version && serverHash != localFile.hash) {
+              // Same version but different hash - server was updated, force re-download
+              await (_db.update(_db.localFiles)
+                ..where((t) => t.id.equals(fileMap['id'] as String)))
+                .write(LocalFilesCompanion(
+                  hash: Value(serverHash),
+                  localPath: const Value(null),
+                ));
+              print('Force re-download for: ${fileMap['originalName']}');
+            }
+          }
+        }
+        
         // Handle deleted files
         final deletedFiles = changes['deleted'] as List<dynamic>? ?? [];
         
@@ -140,11 +182,14 @@ class SyncNotifier extends StateNotifier<AsyncValue<List<LocalFile>>> {
         }
       }
       
-      // 5. Save sync timestamp
+      // 5. Proactively download new/updated files
+      await _proactiveDownload();
+      
+      // 6. Save sync timestamp
       await prefs.setInt('lastSyncTime', syncTime.millisecondsSinceEpoch);
       print('Saved last sync time: $syncTime');
       
-      // 6. Reload local file list
+      // 7. Reload local file list
       await _loadFiles();
       
     } catch (e) {
@@ -153,6 +198,61 @@ class SyncNotifier extends StateNotifier<AsyncValue<List<LocalFile>>> {
     } finally {
       // Always set syncing state back to false
       _ref.read(isSyncingProvider.notifier).state = false;
+    }
+  }
+
+  Future<void> _proactiveDownload() async {
+    try {
+      final files = await _db.select(_db.localFiles).get();
+      
+      Directory? baseDir;
+      if (Platform.isAndroid) {
+        baseDir = Directory('/storage/emulated/0/Download');
+      } else {
+        baseDir = await getApplicationDocumentsDirectory();
+      }
+      
+      final synceDir = Directory(p.join(baseDir!.path, 'Synce'));
+      if (!await synceDir.exists()) {
+        await synceDir.create(recursive: true);
+      }
+      
+      for (final file in files) {
+        // Skip if already has valid local file with matching hash
+        if (file.localPath != null) {
+          final localFile = File(file.localPath!);
+          if (await localFile.exists()) {
+            try {
+              final bytes = await localFile.readAsBytes();
+              final localHash = sha256.convert(bytes).toString();
+              if (localHash == file.hash) {
+                print('File already synced: ${file.originalName}');
+                continue;
+              }
+            } catch (e) {
+              // File read error, will re-download
+            }
+          }
+        }
+        
+        // Download file
+        final localPath = p.join(synceDir.path, file.originalName);
+        print('Proactively downloading: ${file.originalName}');
+        
+        try {
+          await _api.downloadFile(file.id, localPath);
+          
+          await (_db.update(_db.localFiles)
+            ..where((t) => t.id.equals(file.id)))
+            .write(LocalFilesCompanion(localPath: Value(localPath)));
+          
+          print('Downloaded: ${file.originalName}');
+        } catch (e) {
+          print('Failed to download ${file.originalName}: $e');
+        }
+      }
+    } catch (e) {
+      print('Proactive download failed: $e');
     }
   }
 
@@ -243,10 +343,7 @@ class SyncNotifier extends StateNotifier<AsyncValue<List<LocalFile>>> {
       }
 
       // 4. Open file
-      final result = await OpenFile.open(localPath);
-      if (result.type != ResultType.done) {
-        throw Exception(result.message);
-      }
+      await OpenFile.open(localPath);
     } catch (e) {
       print('Failed to open file: $e');
       rethrow;
