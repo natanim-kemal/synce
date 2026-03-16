@@ -34,20 +34,58 @@ export class FilesService {
     const folder = email || userId;
     const storedName = `${folder}/${hash}.pdf`;
 
-    // 3. Check if file with same name already exists
+    // 3. Check if file with same content (hash) already exists
+    // First check by hash - if same content exists, reuse it
+    const existingByHash = await this.prisma.file.findFirst({
+      where: { userId, hash: hash, deletedAt: null },
+    });
+
+    if (existingByHash) {
+      // Same content already exists - check if it's the same file or a different name
+      const existingByName = await this.prisma.file.findFirst({
+        where: { userId, originalName: file.originalname, deletedAt: null },
+      });
+
+      if (existingByName && existingByName.id === existingByHash.id) {
+        // Same file with same name - just update metadata
+        return this.prisma.file.update({
+          where: { id: existingByHash.id },
+          data: {
+            size: file.size,
+            deviceId: deviceId,
+            lastModified: new Date(),
+          },
+        });
+      }
+
+      // Different name but same content - create new record pointing to same stored file
+      return this.prisma.file.create({
+        data: {
+          userId,
+          originalName: file.originalname,
+          storedName: existingByHash.storedName, // Reuse existing stored file
+          size: file.size,
+          hash,
+          deviceId,
+          version: 1,
+        },
+      });
+    }
+
+    // 4. Check if file with same name exists (new content)
     const existingFile = await this.prisma.file.findFirst({
       where: { userId, originalName: file.originalname, deletedAt: null },
     });
 
     if (existingFile) {
-      // If the storedName (which includes hash) is different, we need to upload and potentially cleanup
+      // Different content for same name - it's an update
+      // Upload new file to storage
+      const s3Exists = await this.storage.fileExists(storedName);
+      if (!s3Exists) {
+        await this.storage.uploadFile(storedName, file.buffer, 'application/pdf');
+      }
+      // Cleanup old storage file if it's different
       if (existingFile.storedName !== storedName) {
-        // Upload new file to S3
-        const s3Exists = await this.storage.fileExists(storedName);
-        if (!s3Exists) {
-          await this.storage.uploadFile(storedName, file.buffer, 'application/pdf');
-        }
-        // Cleanup old S3 file if it's different
         await this.storage.deleteFile(existingFile.storedName);
       }
 
@@ -65,13 +103,13 @@ export class FilesService {
       });
     }
 
-    // 4. Case: New file - Upload to S3
+    // 5. Case: New file - Upload to storage
     const s3Exists = await this.storage.fileExists(storedName);
     if (!s3Exists) {
       await this.storage.uploadFile(storedName, file.buffer, 'application/pdf');
     }
 
-    // 5. Save new record to database
+    // 6. Save new record to database
     return this.prisma.file.create({
       data: {
         userId,
