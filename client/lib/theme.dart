@@ -10,7 +10,7 @@ class DesignSystem {
       onSurface: Colors.grey[900]!,
       outline: Colors.grey[300],
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: Colors.white,
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -39,7 +39,7 @@ class DesignSystem {
       onSurface: Colors.grey[100]!,
       outline: Colors.white10,
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: Color(0xFF1F2937), // Gray 800
       elevation: 0,
       shape: RoundedRectangleBorder(
