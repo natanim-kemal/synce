@@ -5,18 +5,22 @@ import { PrismaService } from '../prisma/prisma.service';
 export class SyncService {
     constructor(private prisma: PrismaService) { }
 
-    async getChanges(userId: string, since: Date) {
+    async getChanges(userId: string, since: Date, limit: number = 100, cursor?: string) {
+        const cursorObj = cursor ? { id: cursor } : undefined;
+        
         const [newFiles, updatedFiles, deletedFiles] = await Promise.all([
-            // New files (uploaded after timestamp)
             this.prisma.file.findMany({
                 where: {
                     userId,
                     uploadedAt: { gt: since },
                     deletedAt: null,
                 },
+                take: limit,
+                cursor: cursorObj,
+                skip: cursor ? 1 : 0,
+                orderBy: { uploadedAt: 'asc' },
             }),
 
-            // Updated files (modified after timestamp, but created before)
             this.prisma.file.findMany({
                 where: {
                     userId,
@@ -24,20 +28,26 @@ export class SyncService {
                     uploadedAt: { lte: since },
                     deletedAt: null,
                 },
+                take: limit,
+                orderBy: { lastModified: 'asc' },
             }),
 
-            // Deleted files
             this.prisma.file.findMany({
                 where: {
                     userId,
                     deletedAt: { gt: since },
                 },
                 select: { id: true, originalName: true, deletedAt: true },
+                take: limit,
+                orderBy: { deletedAt: 'asc' },
             }),
         ]);
 
+        const lastFile = newFiles.length > 0 ? newFiles[newFiles.length - 1] : null;
+
         return {
             serverTimestamp: new Date(),
+            nextCursor: lastFile?.id || null,
             changes: {
                 new: newFiles,
                 updated: updatedFiles,
