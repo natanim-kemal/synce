@@ -80,4 +80,4 @@ jobs:
           mv android-apk/app-release.apk "synce-android-$TAG.apk"
           find . -name 'synce-windows-*.zip' -exec mv {} "synce-windows-$TAG.zip" \;
           sha256sum ./*.apk ./*.zip > SHA256SUMS.txt
-          gh release create "$TAG" --generate-notes --title "Synce $TAG" ./*.apk ./*.zip SHA256SUMS.txt
+          gh release create "$TAG" --repo natanim-kemal/synce --generate-notes --title "Synce $TAG" ./*.apk ./*.zip SHA256SUMS.txt
