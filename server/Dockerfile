@@ -1,6 +1,9 @@
 FROM node:22-alpine
 WORKDIR /app
 
+# Prisma engines need openssl present at runtime and migrate time
+RUN apk add --no-cache openssl
+
 COPY package*.json ./
 RUN npm ci
 
