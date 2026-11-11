@@ -13,7 +13,7 @@ Personal/family PDF sync at `https://synce.natanim.dev`, minimal cost, deployed 
 | Database | **RDS PostgreSQL** `db.t4g.micro`, single-AZ | Earns the $20 "Create an Aurora or RDS database" activity credit (~6 weeks of DB cost covered); managed backups/patching. EC2 learning is unaffected — the app, Docker, Nginx, TLS, SSH all still run on EC2. |
 | App hosting | **EC2** `t4g.micro` (ARM, Amazon Linux 2023), Docker Compose (NestJS + Nginx/certbot) | Cheapest full-control box; user wants to learn EC2. |
 | File storage | **S3** (private bucket, instance IAM role) | Already tested end-to-end against real S3 with the new storage-service config. |
-| DNS | **Route 53 sub-zone** `synce.natanim.dev`, delegated | User adds 2 NS records at their current DNS provider once; everything after is CDK-managed. |
+| DNS | **Cloudflare A record** `api.synce.natanim.dev` → EC2 IP (DNS only) | `synce.natanim.dev` already hosts a marketing website — delegating that sub-zone to Route 53 would shadow it. App gets its own name; Route 53 zone removed from the stack. |
 | IaC | **CDK (TypeScript)**, one stack | Per original agreement. |
 | HTTPS | **Let's Encrypt** via certbot container on Nginx | ACM certs can't terminate on EC2; an ALB (~$16/mo) is rejected on cost. |
 | Secrets | **SSM Parameter Store** (`SecureString`) | Kills the `.env`-in-git and `JWT_SECRET || 'secret'` fallback risks. |
