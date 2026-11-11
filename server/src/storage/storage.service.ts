@@ -9,13 +9,14 @@ export class StorageService {
 
     constructor() {
         this.s3Client = new S3Client({
-            endpoint: process.env.S3_ENDPOINT || 'http://localhost:9000',
-            region: process.env.S3_REGION || 'auto',
-            credentials: {
-                accessKeyId: process.env.S3_ACCESS_KEY || 'minioadmin',
-                secretAccessKey: process.env.S3_SECRET_KEY || 'minioadmin',
-            },
-            forcePathStyle: true, // Required for MinIO
+            // Omit endpoint for real AWS; set S3_ENDPOINT (and S3_FORCE_PATH_STYLE=true) for MinIO.
+            ...(process.env.S3_ENDPOINT ? { endpoint: process.env.S3_ENDPOINT } : {}),
+            region: process.env.S3_REGION || 'eu-north-1',
+            // Static keys only for MinIO/local; real AWS uses the instance IAM role (default chain).
+            ...(process.env.S3_ACCESS_KEY
+                ? { credentials: { accessKeyId: process.env.S3_ACCESS_KEY, secretAccessKey: process.env.S3_SECRET_KEY || '' } }
+                : {}),
+            forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
         });
     }
 
