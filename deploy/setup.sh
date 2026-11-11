@@ -29,10 +29,10 @@ sleep 5
 docker compose run --rm server npx prisma migrate deploy
 
 # 4. Certificate, then enable HTTPS vhost
-docker compose run --rm certbot certonly \
+docker compose run --rm --entrypoint certbot certbot certonly \
   --webroot -w /var/www/certbot \
   -d api.synce.natanim.dev \
-  --email "$EMAIL" --agree-tos --no-eff-email --non-interactive
+  --email "$EMAIL" --agree-tos --no-eff-email --non-interactive --keep-until-expiring
 cp nginx/templates/https.conf nginx/conf.d/synce.conf
 docker compose exec nginx nginx -s reload
 
