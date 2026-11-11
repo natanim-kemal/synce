@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { S3Client, PutObjectCommand, HeadObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, HeadObjectCommand, HeadBucketCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 @Injectable()
@@ -51,6 +51,14 @@ export class StorageService {
             Key: key,
         });
         return getSignedUrl(this.s3Client, command, { expiresIn });
+    }
+
+    async checkHealth(): Promise<void> {
+        await this.s3Client.send(
+            new HeadBucketCommand({
+                Bucket: this.bucketName,
+            }),
+        );
     }
 
     async deleteFile(key: string): Promise<void> {
