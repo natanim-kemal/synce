@@ -1,27 +1,19 @@
 {
-  "logs": {
-    "agents": {
-      "synce": {
-        "logs": {
-          "default": {
-            "sources": [
-              "/var/lib/docker/containers/*/*.log"
-            ]
-          }
-        }
-      }
+  "metrics": {
+    "namespace": "Synce/Host",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
     },
-    "metrics": {
-      "collected": {
-        "cpu": {
-          "enabled": true
-        },
-        "mem": {
-          "enabled": true
-        }
+    "metrics_collected": {
+      "cpu": {
+        "enabled": true,
+        "measurement": ["cpu_usage_idle"],
+        "stats": ["avg"]
       },
-      "append_dimensions": {
-        "InstanceId": "${aws:InstanceId}"
+      "mem": {
+        "enabled": true,
+        "measurement": ["mem_used_percent"],
+        "stats": ["avg"]
       }
     }
   }
