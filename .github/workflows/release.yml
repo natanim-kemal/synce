@@ -33,7 +33,9 @@ jobs:
             "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > client/android/key.properties
       - name: build apk
         working-directory: client
-        run: flutter build apk --release --build-name=${{ github.ref_name }} --build-number=${{ github.run_number }} --dart-define=SYNCE_API_URL=https://api.synce.natanim.dev
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          flutter build apk --release --build-name=${{ github.ref_name }} --build-number=${{ github.run_number }} --dart-define=SYNCE_API_URL=https://api.synce.natanim.dev
       - uses: actions/upload-artifact@v4
         with:
           name: android-apk
@@ -50,7 +52,9 @@ jobs:
           cache: true
       - name: build windows app
         working-directory: client
-        run: flutter build windows --release --dart-define=SYNCE_API_URL=https://api.synce.natanim.dev
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          flutter build windows --release --dart-define=SYNCE_API_URL=https://api.synce.natanim.dev
       - name: package
         run: Compress-Archive -Path client/build/windows/x64/runner/Release/* -DestinationPath synce-windows-${{ github.ref_name }}.zip
       - uses: actions/upload-artifact@v4
