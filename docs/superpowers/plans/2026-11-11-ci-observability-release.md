@@ -83,6 +83,6 @@
 
 ### Task E: First public release
 
-- [ ] Step 1: Tag `v0.1.0` → CI publishes release with APK + Windows zip
-- [ ] Step 2: Verify the site download buttons point at the new assets
-- [x] Step 3: Sideload the APK on a device, run the app against `https://api.synce.natanim.dev`
+- [x] Step 1: Tag `v0.1.0` → CI publishes release with APK + Windows zip
+- [x] Step 2: Verify the site download buttons point at the new assets
+- [ ] Step 3: Sideload the APK on a device, run the app against `https://api.synce.natanim.dev`
