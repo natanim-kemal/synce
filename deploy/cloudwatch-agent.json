@@ -1,0 +1,28 @@
+{
+  "logs": {
+    "agents": {
+      "synce": {
+        "logs": {
+          "default": {
+            "sources": [
+              "/var/lib/docker/containers/*/*.log"
+            ]
+          }
+        }
+      }
+    },
+    "metrics": {
+      "collected": {
+        "cpu": {
+          "enabled": true
+        },
+        "mem": {
+          "enabled": true
+        }
+      },
+      "append_dimensions": {
+        "InstanceId": "${aws:InstanceId}"
+      }
+    }
+  }
+}
