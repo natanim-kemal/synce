@@ -9,7 +9,10 @@ final apiClientProvider = Provider((ref) => ApiClient());
 class ApiClient {
   late final Dio _dio;
   final _storage = const FlutterSecureStorage();
-  final String baseUrl = 'http://10.6.159.62:3000';
+  final String baseUrl = const String.fromEnvironment(
+    'SYNCE_API_URL',
+    defaultValue: 'http://10.6.159.62:3000',
+  );
 
   ApiClient() {
     _dio = Dio(BaseOptions(
