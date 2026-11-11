@@ -10,7 +10,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:crypto/crypto.dart';
-import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 
@@ -205,14 +204,14 @@ class SyncNotifier extends StateNotifier<AsyncValue<List<LocalFile>>> {
     try {
       final files = await _db.select(_db.localFiles).get();
       
-      Directory? baseDir;
+      Directory baseDir;
       if (Platform.isAndroid) {
         baseDir = Directory('/storage/emulated/0/Download');
       } else {
         baseDir = await getApplicationDocumentsDirectory();
       }
       
-      final synceDir = Directory(p.join(baseDir!.path, 'Synce'));
+      final synceDir = Directory(p.join(baseDir.path, 'Synce'));
       if (!await synceDir.exists()) {
         await synceDir.create(recursive: true);
       }
@@ -299,18 +298,17 @@ class SyncNotifier extends StateNotifier<AsyncValue<List<LocalFile>>> {
       }
 
       // 1. Get Synce directory
-      Directory? baseDir;
+      Directory baseDir;
       if (Platform.isAndroid) {
-        baseDir = await getExternalStorageDirectory();
         // Move up to the root of storage to find/create "Download" or similar public folder if needed
-        // For now, getExternalStorageDirectory() returns /storage/emulated/0/Android/data/com.example.client/files
+        // For now, getExternalStorageDirectory() returns /storage/emulated/0/Android/data/dev.natanim.synce/files
         // To save to public Downloads/Synce:
-        baseDir = Directory('/storage/emulated/0/Download'); 
+        baseDir = Directory('/storage/emulated/0/Download');
       } else {
         baseDir = await getApplicationDocumentsDirectory();
       }
       
-      final synceDir = Directory(p.join(baseDir!.path, 'Synce'));
+      final synceDir = Directory(p.join(baseDir.path, 'Synce'));
       if (!await synceDir.exists()) {
         await synceDir.create(recursive: true);
       }
