@@ -37,10 +37,10 @@
 - Modify: `server/src/app.module.ts` (ThrottlerModule global 30/min), `server/src/auth/auth.controller.ts` (`@Throttle` 5/min)
 - Modify: `server/package.json` (add `@nestjs/throttler`)
 
-- [ ] Step 1: `npm install @nestjs/throttler` in `server/`
-- [ ] Step 2: Apply the four edits above (lazy guard: `const secret = process.env.JWT_SECRET; if (!secret) throw new Error('JWT_SECRET is required')` in JwtStrategy; ConfigService variant in auth.module)
-- [ ] Step 3: Verify: `npx tsc --noEmit` clean; `npm test` passes (specs are smoke-level, no secret assertions); server boots with local `.env` (has JWT_SECRET) — `npm run build` then start/kill check
-- [ ] Step 4: Commit `server/` changes only (check `.gitignore` excludes `.env` first; add if missing)
+- [x] Step 1: `npm install @nestjs/throttler` in `server/`
+- [x] Step 2: Apply the four edits above (lazy guard: `const secret = process.env.JWT_SECRET; if (!secret) throw new Error('JWT_SECRET is required')` in JwtStrategy; ConfigService variant in auth.module)
+- [x] Step 3: Verify: `npx tsc --noEmit` clean; `npm test` passes (specs are smoke-level, no secret assertions); server boots with local `.env` (has JWT_SECRET) — `npm run build` then start/kill check
+- [x] Step 4: Commit `server/` changes only (check `.gitignore` excludes `.env` first; add if missing)
 
 ### Task 2: CDK stack
 
@@ -50,38 +50,38 @@
 **Interfaces:**
 - Produces: stack outputs `Ec2PublicIp`, `RdsEndpoint`, `BucketName`, `NameServers` (list of 4 NS strings), `InstanceId`, `ZoneId`; SSM parameter names `/synce/prod/jwt-secret`, `/synce/prod/db-password` (consumed by Tasks 3–4)
 
-- [ ] Step 1: Scaffold `infra/` manually (no `cdk init` — smaller): package.json with `aws-cdk-lib@^2`, `constructs`, `tsx`; `cdk.json` app `npx tsx bin/synce.ts`; stack `env: { account: 179530538522, region: eu-north-1 }`
-- [ ] Step 2: Query available engines: `aws rds describe-db-engine-versions --engine postgres --profile aws-agent-toolkit --query "max(DBEngineVersions[].EngineVersion)"` → pin latest 16.x
-- [ ] Step 3: Author stack: VPC(`maxAzs: 2`, `natGateways: 0`, PUBLIC×1 + PRIVATE_ISOLATED×2); SGs (EC2: 80/443 world + 22 user-IP; RDS: 5432 from EC2 SG); EC2 `t4g.micro` AL2023-ARM AMI (SSM parameter lookup `al2023-ami-kernel-default-arm64`), keypair `ec2.KeyPair`, EIP + association, instance role (S3 full on bucket, `ssm:GetParameter*` on `/synce/prod/*`); RDS `db.t4g.micro`, 20 GB gp3, `PUBLICLY_ACCESSIBLE=false`, credentials from generated password; S3 bucket (S3-managed encryption, RETAIN); `route53.PublicHostedZone('synce.natanim.dev')`; `ARecord` targeting EIP; outputs above
-- [ ] Step 4: `cdk bootstrap aws://179530538522/eu-north-1 --profile aws-agent-toolkit` (skip if CDKToolkit stack exists)
-- [ ] Step 5: Verify: `npx aws-cdk synth --strict` clean → `npx aws-cdk diff` shows only expected changes
-- [ ] Step 6: `npx aws-cdk deploy --profile aws-agent-toolkit --require-approval never` → note outputs
-- [ ] Step 7: Commit `infra/`
+- [x] Step 1: Scaffold `infra/` manually (no `cdk init` — smaller): package.json with `aws-cdk-lib@^2`, `constructs`, `tsx`; `cdk.json` app `npx tsx bin/synce.ts`; stack `env: { account: 179530538522, region: eu-north-1 }`
+- [x] Step 2: Query available engines: `aws rds describe-db-engine-versions --engine postgres --profile aws-agent-toolkit --query "max(DBEngineVersions[].EngineVersion)"` → pin latest 16.x
+- [x] Step 3: Author stack: VPC(`maxAzs: 2`, `natGateways: 0`, PUBLIC×1 + PRIVATE_ISOLATED×2); SGs (EC2: 80/443 world + 22 user-IP; RDS: 5432 from EC2 SG); EC2 `t4g.micro` AL2023-ARM AMI (SSM parameter lookup `al2023-ami-kernel-default-arm64`), keypair `ec2.KeyPair`, EIP + association, instance role (S3 full on bucket, `ssm:GetParameter*` on `/synce/prod/*`); RDS `db.t4g.micro`, 20 GB gp3, `PUBLICLY_ACCESSIBLE=false`, credentials from generated password; S3 bucket (S3-managed encryption, RETAIN); `route53.PublicHostedZone('synce.natanim.dev')`; `ARecord` targeting EIP; outputs above
+- [x] Step 4: `cdk bootstrap aws://179530538522/eu-north-1 --profile aws-agent-toolkit` (skip if CDKToolkit stack exists)
+- [x] Step 5: Verify: `npx aws-cdk synth --strict` clean → `npx aws-cdk diff` shows only expected changes
+- [x] Step 6: `npx aws-cdk deploy --profile aws-agent-toolkit --require-approval never` → note outputs
+- [x] Step 7: Commit `infra/`
 
 ### Task 3: SSM secrets + DNS delegation (user handoff)
 
-- [ ] Step 1: Generate strong secret + password locally (PowerRNG), store: `aws ssm put-parameter --name /synce/prod/jwt-secret --type SecureString --value ...` (same for db-password) — values never echoed to console
-- [ ] Step 2: Print the 4 NS records and give the user exact instructions to add them at their `natanim.dev` DNS provider; **user action, non-blocking** — proceed to Task 4 steps that don't need DNS
+- [x] Step 1: Generate strong secret + password locally (PowerRNG), store: `aws ssm put-parameter --name /synce/prod/jwt-secret --type SecureString --value ...` (same for db-password) — values never echoed to console
+- [x] Step 2: Print the 4 NS records and give the user exact instructions to add them at their `natanim.dev` DNS provider; **user action, non-blocking** — proceed to Task 4 steps that don't need DNS
 
 ### Task 4: EC2 bootstrap + TLS
 
-- [ ] Step 1: Wait for instance `ok`/`2/2 checks`; keypair `.pem` saved to `infra/synce-key.pem` (chmod 400 equivalent via icacls)
-- [ ] Step 2: SSH user-data check: docker installed via `user-data` (docker + compose plugin), else install now
-- [ ] Step 3: `scp` to EC2: `deploy/` bundle (docker-compose.yml, nginx/synce.conf, server source tarball excluding node_modules/dist/test) — bundle built from repo, not new code
-- [ ] Step 4: On EC2: fetch SSM params into `deploy/server.env` (instance role, no keys on disk); build server image (`node:22-alpine`); `docker compose up -d nginx` (HTTP only); `docker compose run --rm server npx prisma migrate deploy`; `docker compose up -d server`
-- [ ] Step 5: Verify DNS live: `Resolve-DnsName synce.natanim.dev` → EIP; NS check from Review Focus
-- [ ] Step 6: certbot HTTP-01: `docker compose run --rm certbot certonly --webroot -w /var/www/certbot -d synce.natanim.dev --email natanim@... --agree-tos --no-eff-email`; enable 443 server block; `docker compose exec nginx nginx -s reload`; certbot renew loop in compose
-- [ ] Step 7: Verify: `https://synce.natanim.dev/` returns 200 from the internet path
+- [x] Step 1: Wait for instance `ok`/`2/2 checks`; keypair `.pem` saved to `infra/synce-key.pem` (chmod 400 equivalent via icacls)
+- [x] Step 2: SSH user-data check: docker installed via `user-data` (docker + compose plugin), else install now
+- [x] Step 3: `scp` to EC2: `deploy/` bundle (docker-compose.yml, nginx/synce.conf, server source tarball excluding node_modules/dist/test) — bundle built from repo, not new code
+- [x] Step 4: On EC2: fetch SSM params into `deploy/server.env` (instance role, no keys on disk); build server image (`node:22-alpine`); `docker compose up -d nginx` (HTTP only); `docker compose run --rm server npx prisma migrate deploy`; `docker compose up -d server`
+- [x] Step 5: Verify DNS live: `Resolve-DnsName synce.natanim.dev` → EIP; NS check from Review Focus
+- [x] Step 6: certbot HTTP-01: `docker compose run --rm certbot certonly --webroot -w /var/www/certbot -d synce.natanim.dev --email natanim@... --agree-tos --no-eff-email`; enable 443 server block; `docker compose exec nginx nginx -s reload`; certbot renew loop in compose
+- [x] Step 7: Verify: `https://synce.natanim.dev/` returns 200 from the internet path
 
 ### Task 5: Budget (activity credit)
 
-- [ ] Step 1: `aws budgets create-budget --account-id 179530538522 --budget '{BudgetName:"synce-total",BudgetType:"COST",BudgetLimit:{Amount:"30",Unit:"USD"},TimeUnit:"MONTHLY"}' --profile aws-agent-toolkit` (fallback: console instructions to user)
-- [ ] Step 2: Note in session log that the 2 activity credits (RDS, budget) should appear in the credits dashboard
+- [x] Step 1: `aws budgets create-budget --account-id 179530538522 --budget '{BudgetName:"synce-total",BudgetType:"COST",BudgetLimit:{Amount:"30",Unit:"USD"},TimeUnit:"MONTHLY"}' --profile aws-agent-toolkit` (fallback: console instructions to user)
+- [x] Step 2: Note in session log that the 2 activity credits (RDS, budget) should appear in the credits dashboard
 
 ### Task 6: Production smoke test
 
-- [ ] Step 1: Re-run the 11-check E2E (register/login/non-PDF 400/upload/list/presigned/download/sync/delete/sync-deletion/401) against `https://synce.natanim.dev` — reuse Task 6 script pattern from E2E session (temp PDF, curl, cleanup after)
-- [ ] Step 2: Scrub smoke-test user from prod DB (psql via `docker compose exec server npx prisma db execute` or psql container); delete smoke-test object from S3
+- [x] Step 1: Re-run the 11-check E2E (register/login/non-PDF 400/upload/list/presigned/download/sync/delete/sync-deletion/401) against `https://synce.natanim.dev` — reuse Task 6 script pattern from E2E session (temp PDF, curl, cleanup after)
+- [x] Step 2: Scrub smoke-test user from prod DB (psql via `docker compose exec server npx prisma db execute` or psql container); delete smoke-test object from S3
 
 ### Task 7: Client builds
 
