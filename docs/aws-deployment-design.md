@@ -24,7 +24,7 @@ Personal/family PDF sync at `https://synce.natanim.dev`, minimal cost, deployed 
 Android / Windows client
         │ HTTPS
         ▼
-synce.natanim.dev ── Route 53 sub-zone (NS delegated from natanim.dev)
+api.synce.natanim.dev ── Cloudflare A record (DNS only) → EC2 EIP
         │
         ▼
 EC2 t4g.micro  [ Docker Compose: Nginx+certbot ── NestJS ]
@@ -42,7 +42,7 @@ EC2 t4g.micro  [ Docker Compose: Nginx+certbot ── NestJS ]
 
 ## CDK stack contents
 
-VPC (1 AZ, 1 public subnet + 1 private subnet) · EC2 t4g.micro + EBS 12 GB gp3 + instance role (S3, SSM read) · RDS db.t4g.micro 20 GB in private subnet · S3 bucket (private, versioning off — dedup already handles identity) · Route 53 hosted zone `synce.natanim.dev` · ACM is **not** used (certbot instead) · SSM parameters (created out-of-band or via CDK) · Security groups: EC2 ← 80/443 world, EC2 ← 22 from user IP only, RDS ← 5432 from EC2 SG only.
+VPC (2 AZs, 1 public subnet + 2 private-isolated subnets — RDS requires a 2-AZ subnet group) · EC2 t4g.micro + EBS 12 GB gp3 + EIP + instance role (S3, SSM read, SSM Session Manager) · RDS db.t4g.micro 20 GB encrypted in private subnets · S3 bucket (private, SSL-enforced, RETAIN on delete) · no Route 53 (DNS lives in Cloudflare) · ACM is **not** used (certbot instead) · SSM parameters `/synce/prod/jwt-secret` + `/synce/prod/db-password` · Security groups: EC2 ← 80/443 world + 22 from operator IP only, RDS ← 5432 from EC2 SG only.
 
 ## Cost estimate (eu-north-1, monthly, list price)
 
@@ -51,7 +51,6 @@ VPC (1 AZ, 1 public subnet + 1 private subnet) · EC2 t4g.micro + EBS 12 GB gp3 
 | EC2 t4g.micro | 7 |
 | EBS 12 GB gp3 | 1 |
 | RDS db.t4g.micro + 20 GB | 14 |
-| Route 53 zone | 0.50 |
 | S3 + data transfer | ~1 |
 | **Total** | **~23** |
 
@@ -67,7 +66,7 @@ Covered by: $100 account credits (expire 2027-05) + $20 DB activity credit + $20
 ## Client changes (in scope)
 
 1. `client/lib/data/api_client.dart`: base URL from `--dart-define` (`SYNCE_API_URL`), default keeps local dev working.
-2. Build Android release APK and Windows app with `SYNCE_API_URL=https://synce.natanim.dev`.
+2. Build Android release APK and Windows app with `SYNCE_API_URL=https://api.synce.natanim.dev`.
 3. Android already blocks cleartext HTTP — HTTPS domain satisfies it with zero extra config.
 
 ## Build & deploy steps (after approval)
