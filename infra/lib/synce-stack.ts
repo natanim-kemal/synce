@@ -4,7 +4,6 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as cdk from 'aws-cdk-lib';
 
 // SSH is restricted to the operator's current IP; update and redeploy if it changes.
@@ -114,20 +113,8 @@ export class SynceStack extends Stack {
       deletionProtection: false,
     });
 
-    const zone = new route53.PublicHostedZone(this, 'Zone', {
-      zoneName: 'synce.natanim.dev',
-    });
-    new route53.ARecord(this, 'AppDns', {
-      zone,
-      target: route53.RecordTarget.fromIpAddresses(eip.attrPublicIp),
-      ttl: Duration.seconds(300),
-    });
-    const zoneCfn = zone.node.defaultChild as route53.CfnHostedZone;
-
     new CfnOutput(this, 'Ec2PublicIp', { value: eip.attrPublicIp });
     new CfnOutput(this, 'RdsEndpoint', { value: db.dbInstanceEndpointAddress });
     new CfnOutput(this, 'BucketName', { value: bucket.bucketName });
-    new CfnOutput(this, 'ZoneId', { value: zone.hostedZoneId });
-    new CfnOutput(this, 'NameServers', { value: Fn.join(',', zoneCfn.attrNameServers) });
   }
 }
