@@ -63,6 +63,19 @@ Covered by: $100 account credits (expire 2027-05) + $20 DB activity credit + $20
 3. Rate-limit `/auth/register` + `/auth/login` (ThrottlerModule, ~5 req/min).
 4. No secrets in `.env` on the server — env vars injected by compose from SSM at boot.
 
+## Observability
+
+| Signal | Mechanism | Alarm |
+|---|---|---|
+| Liveness | `GET /health` → DB (`SELECT 1`) + S3 (`HeadBucket`), 200 ok / 503 degraded | — |
+| Uptime | `Synce/Api` `Health` metric (1/0) published every 5 min by cron on the EC2 | `synce-api-down` (2 consecutive periods) → SNS email |
+| App logs | Docker `awslogs` driver → CloudWatch Logs `/synce/app`, 14-day retention | — |
+| Errors | Metric filter on `ERROR` in `/synce/app` → `Synce/App` `Errors` | `synce-app-errors` → SNS email |
+| Host | CloudWatch agent → `Synce/Host` cpu + memory | — |
+| Exceptions | Sentry (`@sentry/nestjs`), enabled only when `SENTRY_DSN` is set | Sentry's own alerts |
+
+SNS topic `synce-alerts` notifies `kemalnatanim@gmail.com`. Total cost under $1/month.
+
 ## Client changes (in scope)
 
 1. `client/lib/data/api_client.dart`: base URL from `--dart-define` (`SYNCE_API_URL`), default keeps local dev working.
