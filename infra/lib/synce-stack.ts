@@ -4,6 +4,11 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as cloudwatch_actions from 'aws-cdk-lib/aws-cloudwatch-actions';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as cdk from 'aws-cdk-lib';
 
 // SSH is restricted to the operator's current IP; update and redeploy if it changes.
@@ -50,6 +55,60 @@ export class SynceStack extends Stack {
         resources: [`arn:aws:ssm:eu-north-1:${this.account}:parameter/synce/prod/*`],
       }),
     );
+
+    const logGroup = new logs.LogGroup(this, 'AppLogs', {
+      logGroupName: '/synce/app',
+      retention: logs.RetentionDays.TWO_WEEKS,
+    });
+    role.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['logs:CreateLogStream', 'logs:PutLogEvents'],
+        resources: [logGroup.logGroupArn, `${logGroup.logGroupArn}:*`],
+      }),
+    );
+    role.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['cloudwatch:PutMetricData'],
+        resources: ['*'],
+      }),
+    );
+
+    const alertTopic = new sns.Topic(this, 'Alerts', {
+      topicName: 'synce-alerts',
+    });
+    alertTopic.addSubscription(new subscriptions.EmailSubscription('kemalnatanim@gmail.com'));
+
+    const healthMetric = new cloudwatch.Metric({
+      namespace: 'Synce/Api',
+      metricName: 'Health',
+    });
+    new cloudwatch.Alarm(this, 'ApiDownAlarm', {
+      alarmName: 'synce-api-down',
+      metric: healthMetric,
+      threshold: 1,
+      evaluationPeriods: 2,
+      datapointsToAlarm: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    }).addAlarmAction(new cloudwatch_actions.SnsAction(alertTopic));
+
+    const errorFilter = new logs.MetricFilter(this, 'ErrorFilter', {
+      logGroup,
+      filterPattern: logs.FilterPattern.literal('ERROR'),
+      metricNamespace: 'Synce/App',
+      metricName: 'Errors',
+    });
+    new cloudwatch.Alarm(this, 'ErrorAlarm', {
+      alarmName: 'synce-app-errors',
+      metric: errorFilter.metric({
+        statistic: cloudwatch.Stats.SUM,
+        period: Duration.minutes(5),
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    }).addAlarmAction(new cloudwatch_actions.SnsAction(alertTopic));
 
     const keyPair = ec2.KeyPair.fromKeyPairName(this, 'KeyPair', 'synce-key');
 
