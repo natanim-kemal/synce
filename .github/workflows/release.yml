@@ -36,10 +36,14 @@ jobs:
         run: |
           dart run build_runner build --delete-conflicting-outputs
           flutter build apk --release --build-name=${{ github.ref_name }} --build-number=${{ github.run_number }} --dart-define=SYNCE_API_URL=https://api.synce.natanim.dev
+          flutter build apk --release --split-per-abi --build-name=${{ github.ref_name }} --build-number=${{ github.run_number }} --dart-define=SYNCE_API_URL=https://api.synce.natanim.dev
       - uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: client/build/app/outputs/flutter-apk/app-release.apk
+          path: |
+            client/build/app/outputs/flutter-apk/app-release.apk
+            client/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            client/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
 
   windows:
     runs-on: windows-2022
@@ -83,7 +87,9 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           cd artifacts
-          mv android-apk/app-release.apk "synce-android-$TAG.apk"
+          mv android-apk/app-release.apk "synce-android-universal-$TAG.apk"
+          mv android-apk/app-arm64-v8a-release.apk "synce-android-arm64-$TAG.apk"
+          mv android-apk/app-armeabi-v7a-release.apk "synce-android-armv7-$TAG.apk"
           find . -name 'synce-windows-*.exe' -exec mv {} "synce-windows-$TAG.exe" \;
           find . -name 'synce-windows-*.zip' -exec mv {} "synce-windows-$TAG.zip" \;
           sha256sum ./*.apk ./*.exe ./*.zip > SHA256SUMS.txt
