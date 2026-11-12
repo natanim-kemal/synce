@@ -15,16 +15,19 @@ export class SyncController {
         @Request() req
     ) {
         const parsedLimit = limit ? parseInt(limit, 10) : 100;
-        
+
         if (!since) {
             return this.syncService.getChanges(req.user.userId, new Date(0), parsedLimit, cursor || undefined);
         }
 
-        const timestamp = new Date(since);
+        const hasOffset = /(?:z|[+-]\d{2}:?\d{2})$/i.test(since.trim());
+        const timestamp = new Date(hasOffset ? since.trim() : `${since.trim()}Z`);
         if (isNaN(timestamp.getTime())) {
             throw new BadRequestException('Invalid timestamp');
         }
 
-        return this.syncService.getChanges(req.user.userId, timestamp, parsedLimit, cursor || undefined);
+        const effective = timestamp.getTime() > Date.now() ? new Date() : timestamp;
+
+        return this.syncService.getChanges(req.user.userId, effective, parsedLimit, cursor || undefined);
     }
 }
