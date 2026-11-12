@@ -55,12 +55,18 @@ jobs:
         run: |
           dart run build_runner build --delete-conflicting-outputs
           flutter build windows --release --dart-define=SYNCE_API_URL=https://api.synce.natanim.dev
-      - name: package
+      - name: install nsis
+        run: choco install nsis --no-progress -y
+      - name: build installer
+        run: ./client/windows/package-installer.ps1 -ReleaseDir client/build/windows/x64/runner/Release -OutputPath "synce-windows-${{ github.ref_name }}.exe" -Version "${{ github.ref_name }}"
+      - name: package portable zip
         run: Compress-Archive -Path client/build/windows/x64/runner/Release/* -DestinationPath synce-windows-${{ github.ref_name }}.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-zip
-          path: synce-windows-*.zip
+          name: windows-build
+          path: |
+            synce-windows-*.exe
+            synce-windows-*.zip
 
   release:
     needs: [android, windows]
@@ -78,6 +84,7 @@ jobs:
         run: |
           cd artifacts
           mv android-apk/app-release.apk "synce-android-$TAG.apk"
+          find . -name 'synce-windows-*.exe' -exec mv {} "synce-windows-$TAG.exe" \;
           find . -name 'synce-windows-*.zip' -exec mv {} "synce-windows-$TAG.zip" \;
-          sha256sum ./*.apk ./*.zip > SHA256SUMS.txt
-          gh release create "$TAG" --repo natanim-kemal/synce --generate-notes --title "Synce $TAG" ./*.apk ./*.zip SHA256SUMS.txt
+          sha256sum ./*.apk ./*.exe ./*.zip > SHA256SUMS.txt
+          gh release create "$TAG" --repo natanim-kemal/synce --generate-notes --title "Synce $TAG" ./*.apk ./*.exe ./*.zip SHA256SUMS.txt
