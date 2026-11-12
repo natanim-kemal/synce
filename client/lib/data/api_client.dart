@@ -99,7 +99,7 @@ class ApiClient {
 
   Future<Map<String, dynamic>> getSyncChanges(DateTime since) async {
     final response = await _dio.get('/sync/changes', queryParameters: {
-      'since': since.toIso8601String(),
+      'since': since.toUtc().toIso8601String(),
     });
     return response.data;
   }
