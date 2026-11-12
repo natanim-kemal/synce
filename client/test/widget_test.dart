@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:client/main.dart';
-import 'package:client/logic/auth_provider.dart';
+import 'package:synce/main.dart';
+import 'package:synce/logic/auth_provider.dart';
 
 class _Unauthenticated extends AuthNotifier {
   _Unauthenticated(super.ref);

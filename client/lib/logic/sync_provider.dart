@@ -61,7 +61,7 @@ class SyncNotifier extends StateNotifier<AsyncValue<List<LocalFile>>> {
       try {
         await _api.uploadFile(
           file, 
-          'flutter-client',
+          'flutter-synce',
           onProgress: (sent, total) {
             _ref.read(uploadProgressProvider.notifier).updateProgress(fileId, sent, total);
           },
