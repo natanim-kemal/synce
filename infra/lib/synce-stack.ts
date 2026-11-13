@@ -124,7 +124,7 @@ export class SynceStack extends Stack {
       keyPair,
       // Pinned deliberately: an SSM "latest" AMI parameter makes every deploy
       // resolve a new image id and silently replace the running instance.
-      machineImage: ec2.MachineImage.fromAmiId('ami-067860620db69db65'),
+      machineImage: ec2.MachineImage.genericLinux({ 'eu-north-1': 'ami-067860620db69db65' }),
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.MICRO),
     });
     instance.addUserData(
