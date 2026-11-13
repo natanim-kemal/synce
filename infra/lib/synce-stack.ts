@@ -12,7 +12,7 @@ import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as cdk from 'aws-cdk-lib';
 
 // SSH is restricted to the operator's current IP; update and redeploy if it changes.
-const SSH_ALLOWED_CIDR = '196.189.18.32/32';
+const SSH_ALLOWED_CIDR = '196.189.31.139/32';
 
 export class SynceStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -122,9 +122,9 @@ export class SynceStack extends Stack {
       securityGroup: appSg,
       role,
       keyPair,
-      machineImage: ec2.MachineImage.fromSsmParameter(
-        '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64',
-      ),
+      // Pinned deliberately: an SSM "latest" AMI parameter makes every deploy
+      // resolve a new image id and silently replace the running instance.
+      machineImage: ec2.MachineImage.genericLinux({ 'eu-north-1': 'ami-067860620db69db65' }),
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.MICRO),
     });
     instance.addUserData(
@@ -132,6 +132,9 @@ export class SynceStack extends Stack {
       'systemctl enable --now docker',
       'usermod -aG docker ec2-user',
       'dnf install -y docker-compose-plugin || (mkdir -p /usr/local/lib/docker/cli-plugins && curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 -o /usr/local/lib/docker/cli-plugins/docker-compose && chmod +x /usr/local/lib/docker/cli-plugins/docker-compose)',
+      'mkdir -p /usr/local/lib/docker/cli-plugins',
+      'BUILDX_VERSION=$(curl -s https://api.github.com/repos/docker/buildx/releases/latest | sed -n \'s/.*"tag_name": "\\([^"]*\\)".*/\\1/p\')',
+      'curl -SL "https://github.com/docker/buildx/releases/download/$BUILDX_VERSION/buildx-$BUILDX_VERSION.linux-arm64" -o /usr/local/lib/docker/cli-plugins/docker-buildx && chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx',
       'mkdir -p /opt/synce',
     );
 
