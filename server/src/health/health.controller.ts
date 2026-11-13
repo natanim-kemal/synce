@@ -27,6 +27,11 @@ export class HealthController {
         return { status: 'ok', checks, timestamp: new Date().toISOString() };
     }
 
+    @Get('test-error')
+    testError() {
+        throw new Error(`Sentry test error ${Date.now()}`);
+    }
+
     private async checkDatabase(): Promise<CheckStatus> {
         try {
             await this.prisma.$queryRaw`SELECT 1`;
