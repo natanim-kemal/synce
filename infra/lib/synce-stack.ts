@@ -12,7 +12,7 @@ import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as cdk from 'aws-cdk-lib';
 
 // SSH is restricted to the operator's current IP; update and redeploy if it changes.
-const SSH_ALLOWED_CIDR = '196.189.18.32/32';
+const SSH_ALLOWED_CIDR = '196.189.31.139/32';
 
 export class SynceStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -122,9 +122,9 @@ export class SynceStack extends Stack {
       securityGroup: appSg,
       role,
       keyPair,
-      machineImage: ec2.MachineImage.fromSsmParameter(
-        '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64',
-      ),
+      // Pinned deliberately: an SSM "latest" AMI parameter makes every deploy
+      // resolve a new image id and silently replace the running instance.
+      machineImage: ec2.MachineImage.fromAmiId('ami-067860620db69db65'),
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.MICRO),
     });
     instance.addUserData(
