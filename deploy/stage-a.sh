@@ -9,6 +9,9 @@ BUCKET=synce-pdf-books-179530538522
 JWT=$(aws ssm get-parameter --name /synce/prod/jwt-secret --with-decryption --query Parameter.Value --output text --region "$REGION")
 DBP=$(aws ssm get-parameter --name /synce/prod/db-password --with-decryption --query Parameter.Value --output text --region "$REGION")
 SENTRY_DSN=$(aws ssm get-parameter --name /synce/prod/sentry-dsn --with-decryption --query Parameter.Value --output text --region "$REGION" 2>/dev/null || true)
+if [ -z "${SENTRY_DSN:-}" ] || [ "$SENTRY_DSN" = "None" ]; then
+  SENTRY_DSN=$(grep '^SENTRY_DSN=' server.env 2>/dev/null | cut -d= -f2- || true)
+fi
 {
   echo "JWT_SECRET=$JWT"
   echo "DATABASE_URL=postgresql://synce:$DBP@$RDS_ENDPOINT:5432/synce"
