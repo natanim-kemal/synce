@@ -2,6 +2,14 @@
 set -euo pipefail
 cd /opt/synce
 
+if ! docker buildx version >/dev/null 2>&1; then
+  BUILDX_VERSION=$(curl -s https://api.github.com/repos/docker/buildx/releases/latest | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p')
+  curl -sSL "https://github.com/docker/buildx/releases/download/$BUILDX_VERSION/buildx-$BUILDX_VERSION.linux-arm64" -o /tmp/docker-buildx
+  sudo mkdir -p /usr/local/lib/docker/cli-plugins
+  sudo mv /tmp/docker-buildx /usr/local/lib/docker/cli-plugins/docker-buildx
+  sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
+fi
+
 REGION=eu-north-1
 RDS_ENDPOINT=syncestack-db5d02a0a9-ymtgfbqi9d7e.cfiykkmik035.eu-north-1.rds.amazonaws.com
 BUCKET=synce-pdf-books-179530538522
