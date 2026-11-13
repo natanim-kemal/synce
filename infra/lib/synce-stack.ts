@@ -132,6 +132,9 @@ export class SynceStack extends Stack {
       'systemctl enable --now docker',
       'usermod -aG docker ec2-user',
       'dnf install -y docker-compose-plugin || (mkdir -p /usr/local/lib/docker/cli-plugins && curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 -o /usr/local/lib/docker/cli-plugins/docker-compose && chmod +x /usr/local/lib/docker/cli-plugins/docker-compose)',
+      'mkdir -p /usr/local/lib/docker/cli-plugins',
+      'BUILDX_VERSION=$(curl -s https://api.github.com/repos/docker/buildx/releases/latest | sed -n \'s/.*"tag_name": "\\([^"]*\\)".*/\\1/p\')',
+      'curl -SL "https://github.com/docker/buildx/releases/download/$BUILDX_VERSION/buildx-$BUILDX_VERSION.linux-arm64" -o /usr/local/lib/docker/cli-plugins/docker-buildx && chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx',
       'mkdir -p /opt/synce',
     );
 
