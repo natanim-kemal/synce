@@ -8,9 +8,20 @@ BUCKET=synce-pdf-books-179530538522
 
 JWT=$(aws ssm get-parameter --name /synce/prod/jwt-secret --with-decryption --query Parameter.Value --output text --region "$REGION")
 DBP=$(aws ssm get-parameter --name /synce/prod/db-password --with-decryption --query Parameter.Value --output text --region "$REGION")
-printf 'JWT_SECRET=%s\nDATABASE_URL=postgresql://synce:%s@%s:5432/synce\nS3_REGION=%s\nS3_BUCKET_NAME=%s\n' \
-  "$JWT" "$DBP" "$RDS_ENDPOINT" "$REGION" "$BUCKET" > server.env
-unset JWT DBP
+SENTRY_DSN=$(aws ssm get-parameter --name /synce/prod/sentry-dsn --with-decryption --query Parameter.Value --output text --region "$REGION" 2>/dev/null || true)
+{
+  echo "JWT_SECRET=$JWT"
+  echo "DATABASE_URL=postgresql://synce:$DBP@$RDS_ENDPOINT:5432/synce"
+  echo "S3_REGION=$REGION"
+  echo "S3_BUCKET_NAME=$BUCKET"
+  if [ -n "${SENTRY_DSN:-}" ] && [ "$SENTRY_DSN" != "None" ]; then
+    echo "SENTRY_DSN=$SENTRY_DSN"
+    echo "SENTRY_ENVIRONMENT=production"
+    echo "SENTRY_RELEASE=${SENTRY_RELEASE:-unknown}"
+    echo "SENTRY_TRACES_SAMPLE_RATE=0.1"
+  fi
+} > server.env
+unset JWT DBP SENTRY_DSN
 chmod 600 server.env
 
 cp nginx/templates/http.conf nginx/conf.d/synce.conf
